@@ -1,0 +1,95 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>QR Attendance (Offline)</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #fff;
+      color: #000;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+    }
+    #reader {
+      width: 100%;
+      max-width: 400px;
+    }
+    .log {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #000;
+    }
+  </style>
+</head>
+<body>
+  <h1>📋 QR Attendance (Offline)</h1>
+
+  <h3>Generate QR Code</h3>
+  <input id="nameInput" type="text" placeholder="Enter Name" />
+  <button onclick="generateQR()">Generate</button>
+  <div id="qrcode" style="margin:20px 0;"></div>
+
+  <h3>Scan QR Code</h3>
+  <div id="reader"></div>
+  <div id="scannedResult" style="margin-top:10px;"></div>
+
+  <div class="log">
+    <h3>🗂 Attendance Logs</h3>
+    <ul id="logList"></ul>
+  </div>
+
+  <script>
+    function generateQR() {
+      const name = document.getElementById("nameInput").value.trim();
+      if (!name) return alert("Enter a name first");
+      const id = name + "-" + Date.now();
+      const data = JSON.stringify({ id, name });
+      document.getElementById("qrcode").innerHTML = "";
+      QRCode.toCanvas(data, { errorCorrectionLevel: 'H' }, function (err, canvas) {
+        if (err) console.error(err);
+        else document.getElementById("qrcode").appendChild(canvas);
+      });
+    }
+
+    function logAttendance(name, time) {
+      const li = document.createElement("li");
+      li.textContent = name + " — " + time;
+      document.getElementById("logList").prepend(li);
+    }
+
+    function handleScan(decodedText, result) {
+      try {
+        const parsed = JSON.parse(decodedText);
+        const time = new Date().toLocaleString();
+        document.getElementById("scannedResult").innerHTML = `
+          <strong>Name:</strong> ${parsed.name}<br>
+          <strong>Time:</strong> ${time}
+        `;
+        logAttendance(parsed.name, time);
+      } catch (e) {
+        document.getElementById("scannedResult").innerHTML = "Invalid QR Code";
+      }
+    }
+
+    const html5QrCode = new Html5Qrcode("reader");
+    Html5Qrcode.getCameras().then(cameras => {
+      if (cameras && cameras.length) {
+        html5QrCode.start(
+          cameras[0].id,
+          { fps: 10, qrbox: 200 },
+          handleScan
+        );
+      }
+    }).catch(err => {
+      document.getElementById("reader").innerHTML = "Camera not available.";
+    });
+  </script>
+</body>
+</html>
